@@ -4,3 +4,4 @@ package-lock.json
 # nagrania klientów i logi tunelu — nigdy do repozytorium
 telegram-bridge/data/
 telegram-bridge/tunnel.log
+telegram-bridge/tunnel*.log
