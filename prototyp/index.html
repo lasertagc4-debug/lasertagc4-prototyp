@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/voice.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1226'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23e63946' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23c6ff3d'/%3E%3C/svg%3E">
 
 <script type="application/ld+json">
@@ -151,7 +152,12 @@
     <div class="hero-actions">
       <a href="#rezerwacja" class="btn btn-primary btn-lg">Sprawdź wolny termin</a>
       <a href="tel:+48888028092" class="btn btn-ghost btn-lg">Zadzwoń teraz</a>
+      <button type="button" class="btn btn-voice btn-lg" id="voice-open" aria-haspopup="dialog">
+        <span class="voice-dot" aria-hidden="true"></span>
+        Zostaw nagrywkę
+      </button>
     </div>
+    <p class="voice-hint">Nie masz czasu pisać? Nagraj wiadomość głosem — odsłuchamy i odpowiemy możliwie najszybciej.</p>
 
     <div class="hero-trust">
       <span><span class="stars">★★★★★</span> <b>4,8/5</b> · 191 opinii Google</span>
@@ -710,11 +716,85 @@
   <a href="#rezerwacja" class="bar-book">Zarezerwuj</a>
 </div>
 
+<!-- ============ OKNO NAGRYWANIA WIADOMOŚCI ============ -->
+<div class="voice-modal" id="voice-modal" role="dialog" aria-modal="true" aria-labelledby="voice-title" hidden>
+  <div class="voice-card">
+    <button type="button" class="voice-x" id="voice-close" aria-label="Zamknij">×</button>
+
+    <p class="eyebrow" style="margin-bottom:6px">Wiadomość głosowa</p>
+    <h2 id="voice-title">Zostaw nagrywkę — oddzwonimy</h2>
+    <p class="voice-sub">Powiedz w 30 sekundach, czego potrzebujesz: termin, liczba osób, okazja. Oliwia odsłucha i odpisze możliwie najszybciej.</p>
+
+    <!-- krok: gotowość -->
+    <div class="voice-state" id="voice-idle">
+      <button type="button" class="voice-rec" id="voice-start" aria-label="Zacznij nagrywanie">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V22h2v-3.1A7 7 0 0 0 19 12h-2z"/></svg>
+        <span>Nagraj wiadomość</span>
+      </button>
+      <p class="voice-note" id="voice-support"></p>
+    </div>
+
+    <!-- krok: nagrywanie -->
+    <div class="voice-state" id="voice-recording" hidden>
+      <div class="voice-live">
+        <span class="voice-pulse" aria-hidden="true"></span>
+        <span>Nagrywam… <b id="voice-timer">0:00</b></span>
+        <span class="voice-limit">limit 60 s</span>
+      </div>
+      <div class="voice-wave" id="voice-wave" aria-hidden="true"></div>
+      <div class="voice-btns">
+        <button type="button" class="btn btn-ghost" id="voice-cancel">Anuluj</button>
+        <button type="button" class="btn btn-primary" id="voice-stop">Zatrzymaj i wyślij</button>
+      </div>
+    </div>
+
+    <!-- krok: odsłuch -->
+    <div class="voice-state" id="voice-review" hidden>
+      <p class="voice-ok-line">Odsłuchaj przed wysłaniem:</p>
+      <audio id="voice-audio" controls preload="metadata"></audio>
+      <div class="voice-fields">
+        <label class="voice-label">Imię (opcjonalnie)
+          <input type="text" id="voice-name" autocomplete="name" maxlength="60" placeholder="np. Ania">
+        </label>
+        <label class="voice-label">Telefon — oddzwonimy
+          <input type="tel" id="voice-phone" autocomplete="tel" maxlength="16" placeholder="600 100 200">
+        </label>
+      </div>
+      <div class="voice-btns">
+        <button type="button" class="btn btn-ghost" id="voice-redo">Nagraj jeszcze raz</button>
+        <button type="button" class="btn btn-primary" id="voice-send">Wyślij wiadomość</button>
+      </div>
+      <p class="voice-consent">Wysyłając nagranie zgadzasz się na kontakt zwrotny w sprawie rezerwacji. Szczegóły w <a href="#prywatnosc">polityce prywatności</a>.</p>
+    </div>
+
+    <!-- krok: wynik -->
+    <div class="voice-state" id="voice-done" hidden>
+      <div class="voice-result-ok">
+        <div class="voice-check" aria-hidden="true">✓</div>
+        <h3>Wiadomość dotarła do ekipy</h3>
+        <p>Numer zgłoszenia <b id="voice-ticket">—</b>. Odpowiemy możliwie najszybciej — zwykle tego samego dnia w godzinach pracy.</p>
+        <p class="voice-fallback">Pilne? Zadzwoń: <a href="tel:+48888028092">888 028 092</a></p>
+      </div>
+    </div>
+
+    <!-- krok: błąd -->
+    <div class="voice-state" id="voice-error" hidden>
+      <div class="voice-result-bad">
+        <h3 id="voice-error-title">Nie udało się wysłać</h3>
+        <p id="voice-error-msg"></p>
+        <p class="voice-fallback">Zadzwoń — załatwimy od razu: <a href="tel:+48888028092">888 028 092</a></p>
+        <button type="button" class="btn btn-ghost" id="voice-retry">Spróbuj jeszcze raz</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox" role="dialog" aria-label="Powiększone zdjęcie">
   <button class="lightbox-close" aria-label="Zamknij">×</button>
   <img id="lightbox-img" src="" alt="">
 </div>
 
 <script src="assets/app.js"></script>
+<script src="assets/voice.js"></script>
 </body>
 </html>
